@@ -1,27 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import GroupList from "./components/GroupList.jsx";
 import GroupPopup from "./components/GroupPopup.jsx";
 import NoteContainer from "./components/NoteContainer.jsx";
 import "./App.css";
 
 const App = () => {
-  const [groups, setGroups] = useState([]); // State for storing groups
+  const [groups, setGroups] = useState(() => {
+    // Retrieve saved groups from localStorage
+    const savedGroups = localStorage.getItem("groups");
+    return savedGroups ? JSON.parse(savedGroups) : [];
+  });
+
   const [showPopup, setShowPopup] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null); // Currently selected group
-  const [notes, setNotes] = useState({}); // State to manage notes for each group
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [notes, setNotes] = useState(() => {
+    // Retrieve saved notes from localStorage
+    const savedNotes = localStorage.getItem("notes");
+    return savedNotes ? JSON.parse(savedNotes) : {};
+  });
+
+  // Save groups to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("groups", JSON.stringify(groups));
+  }, [groups]);
+
+  // Save notes to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("notes", JSON.stringify(notes));
+  }, [notes]);
 
   // Function to add a new group
-  const addGroup = (name) => {
-    setGroups((prevGroups) => [...prevGroups, name]);
+  const addGroup = (group) => {
+    setGroups((prevGroups) => [...prevGroups, group]);
     setShowPopup(false);
   };
 
   // Function to add a note to the selected group
   const addNoteToGroup = (noteInput) => {
     if (selectedGroup) {
+      const currentDate = new Date();
+
+      // Format date: '6 Oct 2024'
+      const formattedDate = currentDate.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+
+      // Format time: '10:10 AM'
+      const formattedTime = currentDate.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      });
+
       setNotes((prev) => ({
         ...prev,
-        [selectedGroup]: [...(prev[selectedGroup] || []), noteInput],
+        [selectedGroup.name]: [
+          ...(prev[selectedGroup.name] || []),
+          { text: noteInput, date: formattedDate, time: formattedTime },
+        ],
       }));
     }
   };
@@ -29,11 +67,9 @@ const App = () => {
   return (
     <div className="appContainer">
       <div className="leftBox">
-        <h1
-          style={{ height: "15%", alignContent: "center", marginLeft: "150px" }}
-        >
-          Pocket Notes
-        </h1>
+        <div className="heading">
+          <h2>Pocket Notes</h2>
+        </div>
         <div className="list">
           <GroupList groups={groups} setSelectedGroup={setSelectedGroup} />
         </div>
@@ -54,12 +90,10 @@ const App = () => {
         {selectedGroup ? (
           <NoteContainer
             selectedGroup={selectedGroup}
-            existingNotes={notes[selectedGroup]}
+            existingNotes={notes[selectedGroup.name]}
             onAddNote={addNoteToGroup}
           />
         ) : (
-          // Render an image that covers the full width and height of rightBox if no group is selected
-
           <img
             src="/image/pic2.jpg"
             alt="No Group Selected"
